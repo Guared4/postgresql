@@ -1,0 +1,4 @@
+repl_user: "replicator"
+repl_password: "Qazwsx123"
+master_address: "192.168.57.11"
+replica_address: "192.168.57.12"
