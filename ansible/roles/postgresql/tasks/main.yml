@@ -1,0 +1,53 @@
+- name: Ensure remote_tmp directory exists with correct permissions
+  file:
+    path: /tmp/ansible-postgres
+    state: directory
+    mode: 0777
+
+- name: Install packages
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+    update_cache: true
+
+- name: Pip install psycopg2-binary
+  pip:
+    name: psycopg2-binary
+
+- name: Start sql service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create user for replication
+  postgresql_user:
+    name: "{{ repl_user }}"
+    password: "{{ repl_password }}"
+    role_attr_flags: replication
+    state: present
+  become: true
+  become_user: postgres
+  when: "ansible_hostname == 'node1'"
+
+- name: Copy config file
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/14/main/postgresql.conf
+    owner: postgres
+    group: postgres
+    mode: 0644
+
+- name: Copy pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: /etc/postgresql/14/main/pg_hba.conf
+    owner: postgres
+    group: postgres
+    mode: 0640
+
+- name: Restart PostgreSQL
+  systemd:
+    name: postgresql
+    state: restarted
