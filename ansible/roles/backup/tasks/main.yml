@@ -1,0 +1,98 @@
+---
+- name: Install PostgreSQL client (for pg_basebackup)
+  apt:
+    name: postgresql-client-14
+    state: present
+    update_cache: yes
+
+- name: Create backup directory (for PostgreSQL nodes)
+  file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0750
+  when: "ansible_hostname != 'barman'"
+
+- name: Ensure postgres user exists on barman
+  user:
+    name: postgres
+    create_home: yes
+    shell: /bin/bash
+  when: "ansible_hostname == 'barman'"
+
+- name: Create backup directory (for barman)
+  file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+  when: "ansible_hostname == 'barman'"
+
+- name: Create replication user on master
+  postgresql_user:
+    name: "{{ backup_user }}"
+    password: "{{ backup_password }}"
+    role_attr_flags: "replication"
+    state: present
+  become: true
+  become_user: postgres
+  when: "ansible_hostname == 'node1'"
+
+- name: Configure pg_hba.conf on master
+  blockinfile:
+    path: /etc/postgresql/14/main/pg_hba.conf
+    block: |
+      host replication {{ backup_user }} {{ barman_address }}/32 md5
+      host replication {{ backup_user }} {{ replica_address }}/32 md5
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - pg_basebackup"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  when: "ansible_hostname == 'node1'"
+  notify: Restart PostgreSQL
+
+- name: Configure postgresql.conf on master
+  lineinfile:
+    path: /etc/postgresql/14/main/postgresql.conf
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+  with_items:
+    - { key: "wal_level", value: "replica" }
+    - { key: "max_wal_senders", value: "10" }
+    - { key: "wal_keep_size", value: "1GB" }
+  when: "ansible_hostname == 'node1'"
+  notify: Restart PostgreSQL
+
+- name: Create .pgpass file for backup user
+  template:
+    src: pgpass.j2
+    dest: "/var/lib/postgresql/.pgpass"
+    owner: "{{ become_usr }}"
+    group: "{{ become_usr }}"
+    mode: 0600
+
+- name: Take base backup using pg_basebackup (on barman)
+  shell: |
+    pg_basebackup -h {{ master_address }} -p {{ master_port }} -U {{ backup_user }} \
+    -D {{ backup_dir }}/pg_backup_$(date +%Y-%m-%d_%H-%M-%S) \
+    -Ft -z -Xs -P -v
+  environment:
+    PGPASSWORD: "{{ backup_password }}"
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: root
+  when: "ansible_hostname == 'barman'"
+
+- name: Setup backup cron job (on barman)
+  cron:
+    name: "Daily PostgreSQL base backup"
+    minute: "0"
+    hour: "2"
+    job: >
+      pg_basebackup -h {{ master_address }} -p {{ master_port }} -U {{ backup_user }}
+      -D {{ backup_dir }}/pg_backup_$(date +\%Y-\%m-\%d) -Ft -z -Xs -P -v
+    user: root
+  when: "ansible_hostname == 'barman'"
