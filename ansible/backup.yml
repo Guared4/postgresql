@@ -1,0 +1,6 @@
+- name: Configure backup
+  hosts: backup
+  become: true
+  roles:
+    - common
+    - backup
