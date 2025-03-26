@@ -1,0 +1,17 @@
+- name: Restart PostgreSQL
+  systemd:
+    name: postgresql
+    state: restarted
+  when: "ansible_hostname == 'node1'"
+
+- name: Reload PostgreSQL
+  systemd:
+    name: postgresql
+    state: reloaded
+  when: "ansible_hostname == 'node1'"
+
+- name: Cleanup old backups
+  command: find {{ backup_dir }} -name "pg_backup_*" -mtime +7 -exec rm -rf {} \;
+  become: true
+  become_user: "{{ become_usr }}"
+  when: "ansible_hostname != 'node1'"
