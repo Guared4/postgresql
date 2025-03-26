@@ -1,0 +1,49 @@
+- name: Stop postgres service on replica
+  systemd:
+    name: postgresql
+    state: stopped
+  when: "ansible_hostname == 'node2'"
+
+- name: Delete files from replica
+  file:
+    path: /var/lib/postgresql/14/main/
+    state: absent
+  when: "ansible_hostname == 'node2'"
+
+- name: Copy postgres file to replica
+  expect:
+    command: "pg_basebackup -h {{ master_address }} -U  {{ repl_user }} -D  /var/lib/postgresql/14/main/ -R -P"
+    responses:
+      'Password': "{{ repl_password }}"
+  when: "ansible_hostname == 'node2'"
+
+- name: Change owner to postgres
+  file:
+    path: /var/lib/postgresql/14/main/
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0700
+    recurse: true
+  when: "ansible_hostname == 'node2'"
+
+- name: Start postgres service on replica
+  systemd:
+    name: postgresql
+    state: started
+  when: "ansible_hostname == 'node2'"
+
+- name: Create new db on master
+  postgresql_db:
+    name: otus
+  become_user: postgres
+  when: "ansible_hostname == 'node1'"
+
+- name: Show databases
+  shell: psql -c '\l'
+  become_user: postgres
+  register: result
+
+- name: Print result
+  debug:
+    var: result.stdout_lines
