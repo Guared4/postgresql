@@ -140,7 +140,7 @@ ok: [node1]
 ok: [barman]
 ok: [node2]
 ...
-TASK [Show backup result] *************************************************************************************
+TASK [Display backup results] *********************************************************************************
 skipping: [node1]
 skipping: [node2]
 ok: [barman] => {
@@ -155,31 +155,31 @@ ok: [barman] => {
             "-U",
             "backup_user",
             "-D",
-            "/var/lib/postgresql/backups/pg_backup_2025-03-26",
+            "/var/lib/postgresql/backups/pg_backup_2025-03-27",
             "-Ft",
             "-z",
             "-Xs",
             "-P",
             "-v"
         ],
-        "delta": "0:00:08.877679",
-        "end": "2025-03-26 14:02:00.437284",
+        "delta": "0:00:10.181340",
+        "end": "2025-03-27 09:26:44.138356",
         "failed": false,
         "rc": 0,
-        "start": "2025-03-26 14:01:51.559605",
-        "stderr": "pg_basebackup: initiating base backup, waiting for checkpoint to complete\npg_basebackup: checkpoint completed\npg_basebackup: write-ahead log start point: 0/8000028 on timeline 1\npg_basebackup: starting background WAL receiver\npg_basebackup: created temporary replication slot \"pg_basebackup_6676\"\n    0/43460 kB (0%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)\n11064/43460 kB (25%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)\n30163/43460 kB (69%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)\n43470/43470 kB (100%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)\n43470/43470 kB (100%), 1/1 tablespace                                         \npg_basebackup: write-ahead log end point: 0/8000100\npg_basebackup: waiting for background process to finish streaming ...\npg_basebackup: syncing data to disk ...\npg_basebackup: renaming backup_manifest.tmp to backup_manifest\npg_basebackup: base backup completed",
+        "start": "2025-03-27 09:26:33.957016",
+        "stderr": "pg_basebackup: initiating base backup, waiting for checkpoint to complete\npg_basebackup: checkpoint completed\npg_basebackup: write-ahead log start point: 0/C000028 on timeline 1\npg_basebackup: starting background WAL receiver\npg_basebackup: created temporary replication slot \"pg_basebackup_6686\"\n    0/43460 kB (0%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)\n15131/43460 kB (34%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)\n34357/43460 kB (79%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)\n43470/43470 kB (100%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)\n43470/43470 kB (100%), 1/1 tablespace                                         \npg_basebackup: write-ahead log end point: 0/C000100\npg_basebackup: waiting for background process to finish streaming ...\npg_basebackup: syncing data to disk ...\npg_basebackup: renaming backup_manifest.tmp to backup_manifest\npg_basebackup: base backup completed",
         "stderr_lines": [
             "pg_basebackup: initiating base backup, waiting for checkpoint to complete",
             "pg_basebackup: checkpoint completed",
-            "pg_basebackup: write-ahead log start point: 0/8000028 on timeline 1",
+            "pg_basebackup: write-ahead log start point: 0/C000028 on timeline 1",
             "pg_basebackup: starting background WAL receiver",
-            "pg_basebackup: created temporary replication slot \"pg_basebackup_6676\"",
-            "    0/43460 kB (0%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)",
-            "11064/43460 kB (25%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)",
-            "30163/43460 kB (69%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)",
-            "43470/43470 kB (100%), 0/1 tablespace (...pg_backup_2025-03-26/base.tar.gz)",
+            "pg_basebackup: created temporary replication slot \"pg_basebackup_6686\"",
+            "    0/43460 kB (0%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)",
+            "15131/43460 kB (34%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)",
+            "34357/43460 kB (79%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)",
+            "43470/43470 kB (100%), 0/1 tablespace (...pg_backup_2025-03-27/base.tar.gz)",
             "43470/43470 kB (100%), 1/1 tablespace                                         ",
-            "pg_basebackup: write-ahead log end point: 0/8000100",
+            "pg_basebackup: write-ahead log end point: 0/C000100",
             "pg_basebackup: waiting for background process to finish streaming ...",
             "pg_basebackup: syncing data to disk ...",
             "pg_basebackup: renaming backup_manifest.tmp to backup_manifest",
@@ -190,22 +190,22 @@ ok: [barman] => {
     }
 }
 
-TASK [List backup directory to check for the backup file] *****************************************************
+TASK [List backup directory contents] *************************************************************************
 skipping: [node1]
 skipping: [node2]
 changed: [barman]
 
-TASK [Show backup directory contents] *************************************************************************
+TASK [Show backup directory listing] **************************************************************************
 skipping: [node1]
 skipping: [node2]
 ok: [barman] => {
-    "msg": "total 5732\n-rw------- 1 root root  223343 Mar 26 14:01 backup_manifest\n-rw------- 1 root root 5621804 Mar 26 14:01 base.tar.gz\n-rw------- 1 root root   17071 Mar 26 14:02 pg_wal.tar.gz"
+    "msg": "total 5732\n-rw------- 1 root root  223343 Mar 27 09:26 backup_manifest\n-rw------- 1 root root 5621862 Mar 27 09:26 base.tar.gz\n-rw------- 1 root root   17075 Mar 27 09:26 pg_wal.tar.gz"
 }
 
 PLAY RECAP ****************************************************************************************************
-barman                     : ok=6    changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
-node1                      : ok=4    changed=3    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
-node2                      : ok=1    changed=0    unreachable=0    failed=0    skipped=8    rescued=0    ignored=0
+barman                     : ok=6    changed=2    unreachable=0    failed=0    skipped=8    rescued=0    ignored=0
+node1                      : ok=4    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+node2                      : ok=6    changed=5    unreachable=0    failed=0    skipped=8    rescued=0    ignored=0
 ```    
 Playbook отработал без ошибок    
 Из вывода задачи TASK [Show backup result], вижу что бэкап создан успешно.    
