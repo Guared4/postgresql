@@ -1,0 +1,127 @@
+---
+- name: PostgreSQL Backup & Restore with Test Data
+  hosts: all
+  become: true
+  vars:
+    master_address: "192.168.57.11"
+    master_port: "5432"
+    barman_address: "192.168.57.13"
+    backup_user: "backup_user"
+    backup_password: "Qwerty123"
+    backup_dir: "/var/lib/postgresql/backups"
+    test_db: "otus_test"
+    test_table: "test"
+    postgres_data_dir: "/var/lib/postgresql/14/main"
+    postgres_version: "14"
+
+  tasks:
+    # 1. Принудительная остановка PostgreSQL на реплике (на случай проблем с systemd модулем)
+    - name: Force stop PostgreSQL on replica
+      command: sudo systemctl stop postgresql
+      delegate_to: node2
+      run_once: true
+      ignore_errors: yes
+      when: "inventory_hostname == 'node2'"
+
+    # 2. Подготовка тестовых данных на master (node1)
+    - name: Create test database on master
+      postgresql_db:
+        name: "{{ test_db }}"
+        state: present
+      when: "inventory_hostname == 'node1'"
+      become_user: postgres
+      run_once: true
+      delegate_to: node1
+
+    - name: Create test table with primary key on master
+      postgresql_query:
+        db: "{{ test_db }}"
+        query: |
+          CREATE TABLE IF NOT EXISTS {{ test_table }} (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(30)
+          )
+      when: "inventory_hostname == 'node1'"
+      become_user: postgres
+      run_once: true
+      delegate_to: node1
+
+    - name: Insert test data on master
+      postgresql_query:
+        db: "{{ test_db }}"
+        query: |
+          INSERT INTO {{ test_table }} (id, name) VALUES
+          (1, 'Jack'),
+          (2, 'Alice'),
+          (3, 'Bob')
+          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+      when: "inventory_hostname == 'node1'"
+      become_user: postgres
+      run_once: true
+      delegate_to: node1
+
+    # 3. Принудительный запуск PostgreSQL на реплике
+    - name: Force start PostgreSQL on replica
+      command: sudo systemctl start postgresql
+      delegate_to: node2
+      run_once: true
+      ignore_errors: yes
+      when: "inventory_hostname == 'node2'"
+
+    # 4. Проверка статуса реплики
+    - name: Verify replica status
+      command: sudo -u postgres psql -c "SELECT * FROM pg_stat_replication;"
+      delegate_to: node1
+      run_once: true
+      register: replica_status
+      failed_when: false
+
+    - name: Show replica status
+      debug:
+        msg: "{{ replica_status.stdout }}"
+      run_once: true
+
+    # 5. Выполнение бэкапа на barman
+    - name: Ensure backup directory does not exist on barman
+      file:
+        path: "{{ backup_dir }}/pg_backup_{{ ansible_date_time.date }}"
+        state: absent
+      when: "inventory_hostname == 'barman'"
+      run_once: true
+      delegate_to: barman
+
+    - name: Perform base backup from master to barman
+      command: >
+        pg_basebackup -h {{ master_address }} -p {{ master_port }} -U {{ backup_user }}
+        -D {{ backup_dir }}/pg_backup_{{ ansible_date_time.date }}
+        -Ft -z -Xs -P -v
+      environment:
+        PGPASSWORD: "{{ backup_password }}"
+      when: "inventory_hostname == 'barman'"
+      register: backup_result
+      retries: 3
+      delay: 10
+      run_once: true
+      delegate_to: barman
+
+    - name: Show backup result on barman
+      debug:
+        msg: "{{ backup_result }}"
+      when: "inventory_hostname == 'barman'"
+      run_once: true
+      delegate_to: barman
+
+    - name: List backup directory to check for the backup file
+      command: ls -l {{ backup_dir }}/pg_backup_{{ ansible_date_time.date }}
+      when: "inventory_hostname == 'barman'"
+      register: backup_directory_contents
+      failed_when: false
+      run_once: true
+      delegate_to: barman
+
+    - name: Show backup directory contents
+      debug:
+        msg: "{{ backup_directory_contents.stdout }}"
+      when: "inventory_hostname == 'barman'"
+      run_once: true
+      delegate_to: barman
